@@ -66,6 +66,17 @@ def calibrate(points, pointsL, pointsR, resolution):
     return cv2.stereoCalibrate(points, pointsL, pointsR, newCML, distL, newCMR, distR, resolution, criteria, flags)
 
 
+def rectification(newCML, newCMR, resolution, rot, trans, scale):
+    rectL, rectR, projMatrixL, projMatrixR, Q, roi_L, roi_R = cv2.stereoRectify(newCML, distL, newCMR, distR,
+                                                                                resolution, rot, trans, scale,
+                                                                                (0, 0))
+    stereoMapL = cv2.initUndistortRectifyMap(newCML, distL, rectL, projMatrixL, resolution, cv2.CV_16SC2)
+    stereoMapR = cv2.initUndistortRectifyMap(newCMR, distR, rectR, projMatrixR, resolution, cv2.CV_16SC2)
+    return stereoMapL, stereoMapR
+
+
+
+
 if __name__ == "__main__":
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.0001)
     objPoints, imgPointsL, imgPointsR = getPoints(640, 480, (485, 170), (7, 7), 25)
@@ -73,3 +84,8 @@ if __name__ == "__main__":
                                                                                       imgPointsL,
                                                                                       imgPointsR,
                                                                                       (640, 480))
+    stereoMapL, stereoMapR = rectification(newCML, newCMR, (640, 480), rot, trans, 1)
+    np.save("./calibrationParams/stereoMapLx", stereoMapL[0])
+    np.save("./calibrationParams/stereoMapLy", stereoMapL[1])
+    np.save("./calibrationParams/stereoMapRx", stereoMapR[0])
+    np.save("./calibrationParams/stereoMapRy", stereoMapR[1])
