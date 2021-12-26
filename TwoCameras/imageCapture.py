@@ -5,7 +5,7 @@ import glob
 
 def capture(width, height, center):
     # Initialize capturing devices
-    left = cv2.VideoCapture(1)
+    left = cv2.VideoCapture(0)
     left.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     left.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 
@@ -41,13 +41,13 @@ def capture(width, height, center):
 
         # Display cameras
         cv2.namedWindow('Left Camera')
-        cv2.moveWindow('Left Camera', center[0], center[1])
+        # cv2.moveWindow('Left Camera', center[0], center[1])
         cv2.imshow('Left Camera', imgL)
 
         cv2.namedWindow('Right Camera')
-        cv2.moveWindow('Right Camera', center[0] + width, center[1])
+        # cv2.moveWindow('Right Camera', center[0] + width, center[1])
         cv2.imshow('Right Camera', imgR)
 
 
 if __name__ == "__main__":
-    capture(640, 480, (485, 170))
+    capture(1280, 720, (485, 170))

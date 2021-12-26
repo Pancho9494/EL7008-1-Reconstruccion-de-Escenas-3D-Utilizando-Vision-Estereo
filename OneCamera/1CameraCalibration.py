@@ -44,6 +44,7 @@ def calibrate(objPoints, imgPoints, resolution):
 
 
 if __name__ == "__main__":
+    # (9, 6) size of calibration chess board
     objPoints, imgPoints = getPoints((9, 6), verbose=False)
     ret, CM, dist, rvecs, tvecs = calibrate(objPoints, imgPoints, (1280, 720))
     np.save("params/ret", ret)

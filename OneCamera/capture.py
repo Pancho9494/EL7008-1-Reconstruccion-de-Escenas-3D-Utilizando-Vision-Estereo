@@ -5,7 +5,7 @@ import glob
 
 def capture(width, height):
     # Initialize capturing device
-    cam = cv2.VideoCapture(1)
+    cam = cv2.VideoCapture(0)
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 

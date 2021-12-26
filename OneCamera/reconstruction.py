@@ -23,6 +23,20 @@ def create_output(vertices, colors, filename):
         np.savetxt(f, vertices, '%f %f %f %d %d %d')
 
 
+#
+def increase_brightness(img, value=30):
+    HSV = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    h, s, v = cv2.split(HSV)
+
+    lim = 255 - value
+    v[v > lim] = 255
+    v[v <= lim] += value
+
+    finalHSV = cv2.merge((h, s, v))
+    img = cv2.cvtColor(finalHSV, cv2.COLOR_HSV2BGR)
+    return img
+
+
 def reconstruct(resolution):
     disparityMap = np.load("params/disparityMap.npy")
     CM = np.load("params/CM.npy")
@@ -40,7 +54,8 @@ def reconstruct(resolution):
                      [0, 0, 0, 1]])
 
     # Reconstruct
-    imL = cv2.imread("reconstructionImages/Rdown.png")
+    imL = cv2.imread("reconstructionImages/Ldown.png")
+    imL = increase_brightness(imL, value=30)
 
     points3D = cv2.reprojectImageTo3D(disparityMap, Q2)
     colors = cv2.cvtColor(imL, cv2.COLOR_BGR2RGB)
@@ -56,4 +71,4 @@ def reconstruct(resolution):
 
 
 if __name__ == "__main__":
-    reconstruct((1280,720))
+    reconstruct((1280, 720))

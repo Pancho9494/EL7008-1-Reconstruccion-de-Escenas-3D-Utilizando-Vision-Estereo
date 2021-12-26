@@ -3,12 +3,11 @@ import numpy as np
 import glob
 import os
 import matplotlib.pyplot as plt
-from tqdm import tqdm
 
 
-def capture(width, height):
+def unDistortedCapture(width, height, CM, dist, newCM):
     names = ["L", "R"]
-    cam = cv2.VideoCapture(1)
+    cam = cv2.VideoCapture(0)
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 
@@ -19,6 +18,8 @@ def capture(width, height):
     numCapture = 0
     while numCapture < 2:
         successL, img = cam.read()
+        img = cv2.undistort(img, CM, dist, None, newCM)
+
         key = cv2.waitKey(5)
         # Press Esc key to exit
         if key == 27:
@@ -41,45 +42,86 @@ def capture(width, height):
         cv2.namedWindow('Camera')
         cv2.imshow('Camera', img)
     cv2.destroyAllWindows()
-    return cv2.imread("reconstructionImages/R.png"), cv2.imread("reconstructionImages/L.png")
+    return cv2.imread("reconstructionImages/L.png"), cv2.imread("reconstructionImages/R.png")
 
 
-def SGBM(imgL, imgR, winSize, minDisp, maxDisp):
-    numDisp = maxDisp - minDisp
+# mode 0 for BM
+# mode 1 for SGBM
+def computeDisparity(imgL, imgR, winSize, numDisparity, mode, applyFilter=True):
+    # Ensure images are in grayscale
+    imgL = cv2.cvtColor(imgL, cv2.COLOR_BGR2GRAY)
+    imgR = cv2.cvtColor(imgR, cv2.COLOR_BGR2GRAY)
 
-    stereo = cv2.StereoSGBM_create(minDisparity=minDisp,
-                                   numDisparities=numDisp,
-                                   blockSize=11,
-                                   uniquenessRatio=5,
-                                   speckleWindowSize=50,
-                                   speckleRange=1,
-                                   disp12MaxDiff=16,
-                                   P1=8 * 3 * winSize ** 2,
-                                   P2=32 * 3 * winSize ** 2)
-    disparityMap = stereo.compute(imgL, imgR)
-    plt.imshow(disparityMap, 'gray')
+    # Choose BM or SGBM as matcher
+    info = f"{numDisparity} {winSize}"
+    if mode == "sgbm":
+        uniquenessRatio = 5
+        speckleWindow = 100
+        speckleRange = 1
+        disp12 = 16
+        info += f" {uniquenessRatio} {speckleWindow} {speckleRange} {disp12}"
+        leftMatcher = cv2.StereoSGBM.create(minDisparity=-1,
+                                            numDisparities=numDisparity,
+                                            blockSize=winSize,
+                                            uniquenessRatio=uniquenessRatio,
+                                            speckleWindowSize=speckleWindow,
+                                            speckleRange=speckleRange,
+                                            disp12MaxDiff=disp12,
+                                            P1=8 * 3 * winSize ** 2,
+                                            P2=32 * 3 * winSize ** 2)
+    elif mode == "bm":
+        leftMatcher = cv2.StereoBM.create(numDisparities=numDisparity,
+                                          blockSize=winSize)
+
+    # Compute left pov disparity
+    disparityLeft = leftMatcher.compute(imgL, imgR)
+
+    # Apply weighted least squares filter
+    out = disparityLeft
+    if applyFilter:
+        # parameters of post-filtering
+        lmbda = 8000.0
+        sigma = 2.5
+
+        # matcher for right pov
+        rightMatcher = cv2.ximgproc.createRightMatcher(leftMatcher)
+
+        disparityRight = rightMatcher.compute(imgR, imgL)
+
+        # filter instance
+        WLSFilter = cv2.ximgproc.createDisparityWLSFilter(leftMatcher)
+        WLSFilter.setLambda(lmbda)
+        WLSFilter.setSigmaColor(sigma)
+        out = WLSFilter.filter(disparityLeft, imgL, disparity_map_right=disparityRight)
+        info += f" | λ: {lmbda} σ: {sigma}"
+
+    # Visualize result
+    plt.imshow(out, 'gray')
+    plt.title(info)
     plt.show()
-    return disparityMap
+    return out
+
+
+# readability function
+def resize(img, downRatio):
+    return cv2.resize(img, (int(img.shape[1] / downRatio), int(img.shape[0] / downRatio)))
 
 
 if __name__ == "__main__":
     resolution = (1280, 720)
+
+    # load calibration parameters
     ret = np.load('params/ret.npy')
     CM = np.load('params/CM.npy')
     dist = np.load('params/dist.npy')
 
-    imL, imR = capture(resolution[0], resolution[1])
-
     newCM, roi = cv2.getOptimalNewCameraMatrix(CM, dist, resolution, 1)
 
-    imL = cv2.undistort(imL, CM, dist, None, newCM)
-    imR = cv2.undistort(imR, CM, dist, None, newCM)
+    # capture undistorted images and resize
+    imL, imR = unDistortedCapture(resolution[0], resolution[1], CM, dist, newCM)
+    imL = resize(imL, 3)
+    imR = resize(imR, 3)
 
-    imL = cv2.resize(imL, (int(imL.shape[1] / 3), int(imL.shape[0] / 3)))
-    imR = cv2.resize(imR, (int(imR.shape[1] / 3), int(imR.shape[0] / 3)))
-    cv2.imwrite("reconstructionImages/Ldown.png", imL)
-    cv2.imwrite("reconstructionImages/Rdown.png", imR)
-    print(imL.shape, imR.shape)
-
-    disparityMap = SGBM(imgL=imR, imgR=imL, winSize=5, minDisp=-1, maxDisp=61)
+    # compute and save disparity
+    disparityMap = computeDisparity(imgL=imL, imgR=imR, winSize=11, numDisparity=128, mode="bm", applyFilter=False)
     np.save("params/disparityMap", disparityMap)
