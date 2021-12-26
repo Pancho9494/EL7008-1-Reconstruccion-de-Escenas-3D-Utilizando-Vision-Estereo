@@ -4,7 +4,7 @@ import glob
 import cv2
 
 
-def getPoints(boardSize, verbose = False):
+def getPoints(boardSize, verbose=False):
     objP = np.zeros((boardSize[0] * boardSize[1], 3), np.float32)
     objP[:, :2] = np.mgrid[0:boardSize[0], 0:boardSize[1]].T.reshape(-1, 2)
 

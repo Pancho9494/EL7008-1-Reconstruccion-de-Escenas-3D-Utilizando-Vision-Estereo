@@ -54,7 +54,10 @@ def computeDisparity(imgL, imgR, winSize, numDisparity, mode, applyFilter=True):
 
     # Choose BM or SGBM as matcher
     info = f"{numDisparity} {winSize}"
-    if mode == "sgbm":
+    if mode == "BM":
+        leftMatcher = cv2.StereoBM.create(numDisparities=numDisparity,
+                                          blockSize=winSize)
+    elif mode == "SGBM":
         uniquenessRatio = 5
         speckleWindow = 100
         speckleRange = 1
@@ -69,10 +72,6 @@ def computeDisparity(imgL, imgR, winSize, numDisparity, mode, applyFilter=True):
                                             disp12MaxDiff=disp12,
                                             P1=8 * 3 * winSize ** 2,
                                             P2=32 * 3 * winSize ** 2)
-    elif mode == "bm":
-        leftMatcher = cv2.StereoBM.create(numDisparities=numDisparity,
-                                          blockSize=winSize)
-
     # Compute left pov disparity
     disparityLeft = leftMatcher.compute(imgL, imgR)
 
@@ -117,11 +116,11 @@ if __name__ == "__main__":
 
     newCM, roi = cv2.getOptimalNewCameraMatrix(CM, dist, resolution, 1)
 
-    # capture undistorted images and resize
+    # capture undistorted images and resize 3 times down
     imL, imR = unDistortedCapture(resolution[0], resolution[1], CM, dist, newCM)
     imL = resize(imL, 3)
     imR = resize(imR, 3)
 
     # compute and save disparity
-    disparityMap = computeDisparity(imgL=imL, imgR=imR, winSize=11, numDisparity=128, mode="bm", applyFilter=False)
+    disparityMap = computeDisparity(imgL=imL, imgR=imR, winSize=3, numDisparity=128, mode="SGBM", applyFilter=True)
     np.save("params/disparityMap", disparityMap)

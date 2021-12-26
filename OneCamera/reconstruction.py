@@ -24,7 +24,7 @@ def create_output(vertices, colors, filename):
 
 
 #
-def increase_brightness(img, value=30):
+def increaseBrightness(img, value=30):
     HSV = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     h, s, v = cv2.split(HSV)
 
@@ -55,7 +55,7 @@ def reconstruct(resolution):
 
     # Reconstruct
     imL = cv2.imread("reconstructionImages/Ldown.png")
-    imL = increase_brightness(imL, value=30)
+    imL = increaseBrightness(imL, value=30)
 
     points3D = cv2.reprojectImageTo3D(disparityMap, Q2)
     colors = cv2.cvtColor(imL, cv2.COLOR_BGR2RGB)
