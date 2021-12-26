@@ -18,7 +18,11 @@ Para visualizar la nube de puntos generada se recomienda utilizar el programa [M
 
 
 ![Abrir MeshLab](images/meshlabVacio.png)
+
+
 ![Importar nube de puntos](images/importMesh.png)
+
+
 ![Nube de puntos cargada](images/meshCargado.gif)
 
 ## Una cámara
